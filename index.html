@@ -76,6 +76,12 @@
         box-shadow: inset 0 1px 0 #fff;
         transition: background 0.18s;
       }
+      #installBtn {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #111827;
+        text-decoration: none;
+      }
       #installBtnContainer:hover {
         background: #e5e7eb;
       }
@@ -207,27 +213,7 @@
         password and only people who know the secret can visit the hidden URL.
       </p>
     </section>
-    <section id="demo">
-      <h2>Live demo</h2>
-      <div class="card">
-        <h3 style="margin: 0 0 1rem; font-size: 1.25rem; text-align: center">
-          Generate a LockLink now
-        </h3>
-        <label
-          >Target URL
-          <input id="url" type="text" placeholder="https://example.com"
-        /></label>
-        <label
-          >Password <input id="pw" type="password" autocomplete="new-password"
-        /></label>
-        <label
-          >Bookmark name (optional)
-          <input id="name" type="text" placeholder="LockLink →"
-        /></label>
-        <button id="build" type="button">Build</button>
-        <div id="result"></div>
-      </div>
-    </section>
+
     <section>
       <h2>License</h2>
       <p>
@@ -270,59 +256,6 @@
         const bookmarkletURL =
           "javascript:" + encodeURIComponent(bookmarkletBody);
         document.getElementById("installBtn").href = bookmarkletURL;
-
-        /* ---------- live-demo logic ---------- */
-        const te = new TextEncoder(),
-          td = new TextDecoder(),
-          toB64 = (b) => btoa(String.fromCharCode(...new Uint8Array(b))),
-          fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-        url.value = location.href;
-        async function encrypt(t, pw) {
-          const salt = crypto.getRandomValues(new Uint8Array(16)),
-            iv = crypto.getRandomValues(new Uint8Array(12)),
-            km = await crypto.subtle.importKey(
-              "raw",
-              te.encode(pw),
-              "PBKDF2",
-              false,
-              ["deriveKey"]
-            ),
-            key = await crypto.subtle.deriveKey(
-              { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
-              km,
-              { name: "AES-GCM", length: 256 },
-              false,
-              ["encrypt"]
-            ),
-            ct = await crypto.subtle.encrypt(
-              { name: "AES-GCM", iv },
-              key,
-              te.encode(t)
-            );
-          return `${toB64(salt)}.${toB64(iv)}.${toB64(ct)}`;
-        }
-        build.addEventListener("click", async () => {
-          const t = url.value.trim(),
-            pw = pw.value,
-            nm = name.value.trim() || "LockLink →";
-          if (!t || !pw) return alert("URL and password are required");
-          const blob = await encrypt(t, pw);
-          const code = `javascript:(async()=>{try{const te=new TextEncoder(),td=new TextDecoder(),b=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),[a,bv,c]='${"${blob}"}'.split('.'),salt=b(a),iv=b(bv),data=b(c),pass=prompt('Password?');if(pass===null)return;const km=await crypto.subtle.importKey('raw',te.encode(pass),'PBKDF2',false,['deriveKey']),key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']),plain=td.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv},key,data));/^https?:/.test(plain)?location.href=plain:alert('Incorrect password');}catch(e){alert('Incorrect password');}})();`;
-          result.innerHTML = "";
-          const a = document.createElement("a");
-          a.id = "link";
-          a.href = code;
-          a.textContent = nm;
-          a.title = "Drag me to bookmarks";
-          result.appendChild(a);
-          const tip = document.createElement("div");
-          tip.id = "dragTip";
-          tip.textContent = "📌 Drag this button to your bookmarks bar";
-          result.appendChild(tip);
-          const pre = document.createElement("pre");
-          pre.textContent = code;
-          result.appendChild(pre);
-        });
       })();
     </script>
   </body>
